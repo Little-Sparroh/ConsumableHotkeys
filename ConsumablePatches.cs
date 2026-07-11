@@ -62,15 +62,15 @@ public class ConsumableHotkeysMod
         enableHotkeys = configFile.Bind("Consumables", "EnableHotkeys", true, "Enables hotkey functionality for consumables.");
         enableHUD = configFile.Bind("Consumables", "EnableHUD", true, "Enables the HUD display for consumable statuses.");
 
-        consumableHotkeysAnchorX = configFile.Bind("HUD Positioning", "ConsumableHotkeysAnchorX", 0.35f, "X anchor position for ConsumableHotkeys (0-1).");
-        consumableHotkeysAnchorY = configFile.Bind("HUD Positioning", "ConsumableHotkeysAnchorY", 0.9f, "Y anchor position for ConsumableHotkeys (0-1).");
+        consumableHotkeysAnchorX = configFile.Bind("HUD Positioning", "ConsumableHotkeysAnchorX", 0.2561931f, "X anchor position for ConsumableHotkeys (0-1).");
+        consumableHotkeysAnchorY = configFile.Bind("HUD Positioning", "ConsumableHotkeysAnchorY", 0.9362161f, "Y anchor position for ConsumableHotkeys (0-1).");
         consumableHotkeysAnchorX.SettingChanged += OnAnchorChanged;
         consumableHotkeysAnchorY.SettingChanged += OnAnchorChanged;
 
-        personalAccessTokenHotkey = configFile.Bind("Consumables", "PersonalAccessToken_Hotkey", Key.Y, "Hotkey for Personal Access Token.");
-        premiumLootLicenseHotkey = configFile.Bind("Consumables", "PremiumLootLicense_Hotkey", Key.H, "Hotkey for Premium Loot License.");
-        bootlegReplicatorHotkey = configFile.Bind("Consumables", "BootlegReplicator_Hotkey", Key.U, "Hotkey for Bootleg Replicator.");
-        clearanceCertificateHotkey = configFile.Bind("Consumables", "ClearanceCertificate_Hotkey", Key.J, "Hotkey for Clearance Certificate.");
+        personalAccessTokenHotkey = configFile.Bind("Consumables", "PersonalAccessToken_Hotkey", Key.H, "Hotkey for Personal Access Token.");
+        premiumLootLicenseHotkey = configFile.Bind("Consumables", "PremiumLootLicense_Hotkey", Key.J, "Hotkey for Premium Loot License.");
+        bootlegReplicatorHotkey = configFile.Bind("Consumables", "BootlegReplicator_Hotkey", Key.K, "Hotkey for Bootleg Replicator.");
+        clearanceCertificateHotkey = configFile.Bind("Consumables", "ClearanceCertificate_Hotkey", Key.L, "Hotkey for Clearance Certificate.");
     }
 
     private void InitializeStatuses()
