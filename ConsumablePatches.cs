@@ -24,8 +24,11 @@ public class ConsumableHotkeysMod
     private ConfigEntry<bool> enableHUD;
     private ConfigEntry<float> consumableHotkeysAnchorX;
     private ConfigEntry<float> consumableHotkeysAnchorY;
+    private ConfigColor activeColor;
+    private ConfigColor inactiveColor;
 
     private ConfigEntry<Key> personalAccessTokenHotkey;
+
     private ConfigEntry<Key> premiumLootLicenseHotkey;
     private ConfigEntry<Key> bootlegReplicatorHotkey;
     private ConfigEntry<Key> clearanceCertificateHotkey;
@@ -67,7 +70,13 @@ public class ConsumableHotkeysMod
         consumableHotkeysAnchorX.SettingChanged += OnAnchorChanged;
         consumableHotkeysAnchorY.SettingChanged += OnAnchorChanged;
 
+        activeColor = ConfigColor.Bind(configFile, "Colors", "ActiveColor", UIColors.Shamrock,
+            "Rich-text color for active consumables (hex RRGGBB or #RRGGBB).");
+        inactiveColor = ConfigColor.Bind(configFile, "Colors", "InactiveColor", UIColors.Rose,
+            "Rich-text color for inactive consumables (hex RRGGBB or #RRGGBB).");
+
         personalAccessTokenHotkey = configFile.Bind("Consumables", "PersonalAccessToken_Hotkey", Key.H, "Hotkey for Personal Access Token.");
+
         premiumLootLicenseHotkey = configFile.Bind("Consumables", "PremiumLootLicense_Hotkey", Key.J, "Hotkey for Premium Loot License.");
         bootlegReplicatorHotkey = configFile.Bind("Consumables", "BootlegReplicator_Hotkey", Key.K, "Hotkey for Bootleg Replicator.");
         clearanceCertificateHotkey = configFile.Bind("Consumables", "ClearanceCertificate_Hotkey", Key.L, "Hotkey for Clearance Certificate.");
@@ -205,13 +214,14 @@ public class ConsumableHotkeysMod
             {
                 int remainingUses = PlayerData.Instance.GetFlag("dur_drops");
                 status = remainingUses == 0 ? "Inactive" : $"{remainingUses}/{kvp.Value.MaxUses} Uses";
-                color = remainingUses > 0 ? UIColors.Shamrock : UIColors.Rose;
+                color = remainingUses > 0 ? activeColor.Value : inactiveColor.Value;
             }
             else
             {
                 status = kvp.Value.IsActive ? "Active" : "Inactive";
-                color = kvp.Value.IsActive ? UIColors.Shamrock : UIColors.Rose;
+                color = kvp.Value.IsActive ? activeColor.Value : inactiveColor.Value;
             }
+
 
             int count = GetCurrentItemCount(kvp.Key);
             // Short labels for HUD
