@@ -11,6 +11,8 @@ A BepInEx mod for MycoPunk that adds hotkeys and a status HUD for common consuma
   - Clearance Certificate
 - **Status HUD** showing active/inactive state (or remaining uses for Clearance Certificate) and inventory counts
 - **Configurable keybinds** and HUD position with config reload support
+- **Context-aware hotkeys** — ignored while chat is focused, any game menu/window is open, or known mod menus are open (ModSettingsMenu, CheatMenu+, ForceModifiers)
+
 
 ### Default Hotkeys
 
@@ -65,7 +67,8 @@ Access mod settings through the BepInEx configuration file at `<MycoPunk Directo
 ## Help
 
 * **Mod not loading?** Verify BepInEx is installed correctly and check console logs for errors
-* **Hotkeys not working?** Ensure no conflicts with other mods or game settings, and that you have the consumable in inventory
+* **Hotkeys not working?** Ensure no conflicts with other mods or game settings, that you have the consumable in inventory, and that chat/menus/mod UIs are closed
+
 * **HUD missing?** Confirm `EnableHUD` is true and that you are in-game with a local player loaded
 
 ## Authors

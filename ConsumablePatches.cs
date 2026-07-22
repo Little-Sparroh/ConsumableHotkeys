@@ -4,10 +4,14 @@ using Pigeon.Movement;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using Sparroh.UI;
 using TMPro;
+
 
 
 public class ConsumableHotkeysMod
@@ -102,7 +106,8 @@ public class ConsumableHotkeysMod
         UpdateHudVisibility();
     }
 
-    private bool IsHudAlive => hud != null && hud.GameObject != null && hud.Lines != null && hud.Lines.Length >= 4;
+    private bool IsHudAlive => HudHandle.IsValid(hud) && hud.Lines != null && hud.Lines.Length >= 4;
+
 
     public void UpdateHudVisibility()
     {
@@ -254,6 +259,7 @@ public class ConsumableHotkeysMod
     private void CheckHotkeys()
     {
         if (!enableHotkeys.Value) return;
+        if (ShouldBlockHotkeys()) return;
 
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
@@ -263,6 +269,72 @@ public class ConsumableHotkeysMod
         CheckHotkey(keyboard, bootlegReplicatorHotkey.Value, BootlegReplicatorName);
         CheckHotkey(keyboard, clearanceCertificateHotkey.Value, ClearanceCertificateName);
     }
+
+    /// <summary>
+    /// Suppress consumable hotkeys while chat, vanilla menus/windows, or known mod UIs own input.
+    /// </summary>
+    private static bool ShouldBlockHotkeys()
+    {
+        if (Player.LocalPlayer == null)
+            return true;
+
+        try
+        {
+            if (Menu.Instance != null && Menu.Instance.IsOpen)
+                return true;
+
+            if (PlayerInput.IsMenuEnabled)
+                return true;
+
+            if (!PlayerInput.IsPlayerEnabled)
+                return true;
+
+            if (GameManager.Instance != null &&
+                GameManager.Instance.WindowSystem != null &&
+                GameManager.Instance.WindowSystem.Count > 0)
+                return true;
+        }
+        catch
+        {
+            // Early load / teardown races — fail open for this frame.
+        }
+
+        if (IsTextInputFocused())
+            return true;
+
+        if (ModMenuOpenDetector.IsAnyOpen())
+            return true;
+
+        return false;
+    }
+
+    private static bool IsTextInputFocused()
+    {
+        try
+        {
+            var es = EventSystem.current;
+            if (es == null)
+                return false;
+
+            var selected = es.currentSelectedGameObject;
+            if (selected == null)
+                return false;
+
+            var tmp = selected.GetComponent<TMP_InputField>();
+            if (tmp != null && tmp.isFocused)
+                return true;
+
+            var legacy = selected.GetComponent<InputField>();
+            if (legacy != null && legacy.isFocused)
+                return true;
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
 
     private void CheckHotkey(Keyboard keyboard, Key key, string consumableName)
     {
@@ -469,10 +541,11 @@ public class ConsumableHotkeysMod
             HudRepositionClient.Unregister(SparrohPlugin.PluginGUID);
             if (hud != null)
             {
-                if (hud.GameObject != null)
+                if (hud.IsAlive)
                     hud.Destroy();
                 hud = null;
             }
+
         }
         catch (Exception ex)
         {
@@ -489,6 +562,162 @@ public class ConsumableHotkeysMod
         public int MaxUses { get; set; } = -1;
     }
 }
+
+/// <summary>
+/// Soft-detects open state of known mod menus (no hard assembly references).
+/// Retries type resolution so late-loaded plugins are still found.
+/// </summary>
+internal static class ModMenuOpenDetector
+{
+    private static readonly string[] KnownTypeNames =
+    {
+        "ModConfigGUI",
+        "HudRepositionMode",
+        "CheatMenu",
+        "CheatMenuGUI",
+        "CheatMenuPlus",
+        "CheatMenuUI",
+        "ForceModifiers",
+        "ForceModifiersGUI",
+        "ForceModifiersMenu",
+        "ForceModifierMenu",
+        "ForceModifiersUI",
+    };
+
+    private static readonly string[] OpenPropertyNames =
+    {
+        "IsVisible",
+        "IsOpen",
+        "IsActive",
+        "IsHeld",
+        "Visible",
+        "Open",
+    };
+
+    private static readonly List<PropertyInfo> _openProps = new List<PropertyInfo>();
+    private static readonly List<FieldInfo> _openFields = new List<FieldInfo>();
+    private static bool _resolved;
+    private static float _nextRetryTime;
+
+    public static bool IsAnyOpen()
+    {
+        EnsureResolved();
+
+        for (int i = 0; i < _openProps.Count; i++)
+        {
+            try
+            {
+                if (_openProps[i].GetValue(null) is bool b && b)
+                    return true;
+            }
+            catch
+            {
+            }
+        }
+
+        for (int i = 0; i < _openFields.Count; i++)
+        {
+            try
+            {
+                if (_openFields[i].GetValue(null) is bool b && b)
+                    return true;
+            }
+            catch
+            {
+            }
+        }
+
+        return false;
+    }
+
+    private static void EnsureResolved()
+    {
+        if (_resolved)
+            return;
+
+        // Retry periodically until something is found, or give up after a few attempts once game is running.
+        if (Time.unscaledTime < _nextRetryTime)
+            return;
+
+        _nextRetryTime = Time.unscaledTime + 2f;
+        _openProps.Clear();
+        _openFields.Clear();
+
+        var foundAny = false;
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                types = ex.Types;
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (types == null)
+                continue;
+
+            for (int t = 0; t < types.Length; t++)
+            {
+                var type = types[t];
+                if (type == null || !type.IsClass)
+                    continue;
+
+                if (!IsKnownModUiType(type))
+                    continue;
+
+                foreach (var propName in OpenPropertyNames)
+                {
+                    var prop = type.GetProperty(propName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    if (prop != null && prop.PropertyType == typeof(bool) && prop.CanRead)
+                    {
+                        _openProps.Add(prop);
+                        foundAny = true;
+                    }
+                }
+
+                foreach (var propName in OpenPropertyNames)
+                {
+                    var field = type.GetField(propName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    if (field != null && field.FieldType == typeof(bool))
+                    {
+                        _openFields.Add(field);
+                        foundAny = true;
+                    }
+                }
+            }
+        }
+
+        // Once ModSettingsMenu (or any target) is loaded, stop retrying.
+        if (foundAny)
+            _resolved = true;
+    }
+
+    private static bool IsKnownModUiType(Type type)
+    {
+        var name = type.Name;
+        for (int i = 0; i < KnownTypeNames.Length; i++)
+        {
+            if (string.Equals(name, KnownTypeNames[i], StringComparison.Ordinal))
+                return true;
+        }
+
+        // Broader name match for third-party menus that don't use exact type names.
+        if (name.IndexOf("CheatMenu", StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+        if (name.IndexOf("ForceModifier", StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+
+        return false;
+    }
+}
+
 
 [HarmonyPatch]
 public static class StorageSlotPatches

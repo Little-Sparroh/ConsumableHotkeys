@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Sparroh"
 name = "ConsumableHotkeys"
-description = "Hotkeys and status HUD for Personal Access Token, Premium Loot License, Bootleg Replicator, and Clearance Certificate."
+description = "Hotkeys and status HUD for Personal Access Token, Premium Loot License, Bootleg Replicator, and Clearance Certificate. Hotkeys are blocked in chat, menus, and known mod UIs."
 websiteUrl = "https://github.com/Little-Sparroh/ConsumableHotkeys"
 containsNsfwContent = false
 
@@ -17,7 +17,6 @@ Sparroh-SparrohUILib = "1.1.1"
 icon = "icon.png"
 readme = "README.md"
 outdir = "build"
-
 [[build.copy]]
 source = "bin/Release/net48/ConsumableHotkeys.dll"
 target = "BepInEx/plugins/ConsumableHotkeys.dll"
